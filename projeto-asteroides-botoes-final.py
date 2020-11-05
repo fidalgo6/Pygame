@@ -1,0 +1,422 @@
+import os
+import pygame, sys
+from pygame.locals import *
+from gameobjects.vector2 import Vector2
+import math
+import random 
+import pygame_menu
+
+pygame.init()
+os.environ['SDL_VIDEO_CENTERED'] = '1'
+surface = pygame.display.set_mode((1000, 600))
+dificuldade = 'Fácil'
+nome = ''
+
+def set_difficulty(selected, value):
+    global dificuldade
+    print('Set difficulty to {} ({})'.format(selected[0], value))
+    dificuldade = '{}'.format(selected[0], value)
+
+    
+
+def start_the_game():
+    print('Dificuldade: ' + dificuldade)
+    start(dificuldade)
+
+def set_nome(value):
+    global nome
+    nome = value
+
+def desenhaRetangulo(tela,cor,posicao_tamanho,preenchimento):
+    pygame.draw.rect(tela,cor,posicao_tamanho,preenchimento)
+        
+
+
+def start(dificuldade):
+
+    print(dificuldade)
+    pygame.init()
+
+    FPS = 30 
+    fpsClock = pygame.time.Clock()
+
+
+    screen = pygame.display.set_mode([1000, 600])
+    pygame.display.set_caption('Salve o Mundo')
+
+    font = pygame.font.SysFont('sans',80)
+    font2 = pygame.font.SysFont('sans',40)
+    font3 = pygame.font.SysFont('sans',20)
+    placar = 0
+
+    WHITE = (255, 255, 255)
+    BLUE = (0, 51, 204)
+    RED = (255, 0, 0)
+    YELLOW = (255, 255, 0)
+    CINZA = (224, 224, 209)
+
+
+
+    lstElementos = ['Oxigenio','Bario','Helio','Potassio','Rubdio','Cesio','Francio','Hidrogenio','Litio','Sodio']
+
+
+    john = pygame.image.load('johny.png').convert_alpha()
+    john = pygame.transform.scale(john, (180, 120))
+    johnX = 10
+    johnY = 200
+
+    lstElementosFotos = []
+
+    for item in range(3):
+          valor = random.randint(0, 9)
+          lstElementosFotos.append([pygame.transform.scale(pygame.image.load(lstElementos[valor] + '.png').convert_alpha(),(100,60)),900,0,lstElementos[valor]])
+
+         
+
+
+    class Player:
+          def __init__(self,x,y,raio):
+            self.x = x
+            self.y = y
+            self.raio = raio
+          def update(self,x,y):
+            self.x = x
+            self.y = y
+
+    class Nave:
+          def __init__(self,x,y,raio):
+            self.x = x
+            self.y = y
+            self.raio = raio
+          def update(self,x,y):
+            self.x = x
+            self.y = y        
+
+    class Bateria:
+          def __init__(self,x,y,raio):
+            self.x = x
+            self.y = y
+            self.raio = raio
+          def update(self,x,y):
+            self.x = x
+            self.y = y
+
+    class Bala:
+          def __init__(self,x,y,raio):
+            self.x = x
+            self.y = y
+            self.raio = raio
+          def update(self,x,y):
+            self.x = x
+            self.y = y          
+
+    class Enemy:
+          def __init__(self,x,y,raio,nomeElemento):
+            self.x = x
+            self.y = y
+            self.raio = raio
+            self.nomeElemento = nomeElemento
+          def update(self,x,y):
+            self.x = x
+            self.y = y        
+            
+    def colisao(ast1, ast2):
+        distancia =  math.sqrt( ((ast1.x-ast2.x)**2)+((ast1.y-ast2.y)**2) )
+        if (ast1.raio + ast2.raio) >= distancia:
+            print('Bateu')
+            return True
+        else:
+            return False
+
+    class Background():
+          def __init__(self):
+                self.background = pygame.image.load('back.jpg')
+                self.bgimage = pygame.transform.scale(self.background, (1000, 600))
+                self.rectBGimg = self.bgimage.get_rect()
+     
+                self.bgY1 = 0
+                self.bgX1 = 0
+     
+                self.bgY2 = 0
+                self.bgX2 = self.rectBGimg.width
+     
+                self.moving_speed = 15
+             
+          def update(self):
+            self.bgX1 -= self.moving_speed
+            self.bgX2 -= self.moving_speed
+            if self.bgX1 <= -self.rectBGimg.width:
+                self.bgX1 = self.rectBGimg.width
+            if self.bgX2 <= -self.rectBGimg.width:
+                self.bgX2 = self.rectBGimg.width
+                 
+          def render(self):
+             screen.blit(self.bgimage, (self.bgX1, self.bgY1))
+             screen.blit(self.bgimage, (self.bgX2, self.bgY2))
+
+
+    back_ground = Background()
+
+    player = Player(johnX,johnY,20)
+
+    dicElementoEnemy = dict()
+
+
+    for item in lstElementosFotos:
+          enemy = Enemy(item[1],item[2],20,item[3])
+          dicElementoEnemy[item[3]] = enemy
+          
+    elementoAmigo = lstElementos[random.randint(0,9)]
+
+    CLOCKTICK = pygame.USEREVENT+1
+    pygame.time.set_timer(CLOCKTICK, 1000) 
+    temporizador = 120
+    temporizadorInimigos = 110
+
+    enviarAjuda = False
+
+
+    bateria = pygame.image.load('bateria.png').convert_alpha()
+    bateria = pygame.transform.scale(bateria, (140, 120))
+    bateriaX = 900
+    bateriaY = random.randint(0,500)
+    ajuda = Bateria(bateriaX,bateriaY,40)
+
+    balaInimiga = pygame.image.load('bala.png').convert_alpha()
+    balaInimiga = pygame.transform.scale(balaInimiga, (50, 50))
+    balaInimigaX = 875
+    balaInimigaY = 0
+    bala = Bala(balaInimigaX,balaInimigaY,30)
+
+
+    naveInimiga = pygame.image.load('nave-inimiga.png').convert_alpha()
+    naveInimiga = pygame.transform.scale(naveInimiga, (80, 60))
+    naveInimigaX = 875
+    naveInimigaY = 102
+    nave = Nave(naveInimigaX,naveInimigaY,40)
+
+
+
+    if(dificuldade != 'Fácil'):
+
+        balaInimiga2 = pygame.image.load('bala.png').convert_alpha()
+        balaInimiga2 = pygame.transform.scale(balaInimiga2, (50, 50))
+        balaInimiga2X = 875
+        balaInimiga2Y = 0
+        bala2 = Bala(balaInimiga2X,balaInimiga2Y,20)
+
+        naveInimiga2 = pygame.image.load('nave-inimiga.png').convert_alpha()
+        naveInimiga2 = pygame.transform.scale(naveInimiga2, (80, 60))
+        naveInimiga2X = 875
+        naveInimiga2Y = 500
+        nave2 = Nave(naveInimiga2X,naveInimiga2Y,40)        
+          
+
+    while True: # the main game loop
+
+
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == CLOCKTICK:
+                temporizador = temporizador -1
+          
+        if(placar >= 0 and temporizador >= 0):
+              back_ground.update()
+              back_ground.render()
+
+
+              keys = pygame.key.get_pressed()
+              if keys[pygame.K_UP]:
+                  johnY -= 5
+                  if johnY < -10:
+                      johnY += 5      
+              if keys[pygame.K_DOWN]:
+                  johnY += 5
+                  if johnY > 515:
+                      johnY -= 5              
+              if keys[pygame.K_LEFT]:
+                  johnX -= 5
+                  if johnX < -10:
+                      johnX += 5         
+              if keys[pygame.K_RIGHT]:
+                  johnX += 5
+                  if johnX > 900:
+                      johnX -= 5
+
+              score = font2.render('Placar: ' + str(placar), True, (WHITE))
+              screen.blit(score, (800, 50))
+
+              timer1 = font2.render('Tempo: ' + str(temporizador), True, (YELLOW))
+              screen.blit(timer1, (50, 50))
+
+              elementoACapturar = font2.render('Capture: ' + elementoAmigo, True, (WHITE))
+              screen.blit(elementoACapturar, (350, 50))
+
+              if(len(lstElementosFotos) == 0):
+                for item in range(3):
+                      valor = random.randint(0, 9)
+                      lstElementosFotos.append([pygame.transform.scale(pygame.image.load(lstElementos[valor] + '.png').convert_alpha(),(100,60)),900,0,lstElementos[valor]])
+                for item in lstElementosFotos:
+                      enemy = Enemy(item[1],item[2],20,item[3])
+                      dicElementoEnemy[item[3]] = enemy            
+
+              for item in lstElementosFotos:
+                      if(item[2] == 0):
+                            item[2] = random.randint(0,500)
+                      if(item[1] < 0):
+                            lstElementosFotos = []
+                            item[1] = 900
+                            item[2] = 0
+                      item[1] -= 5
+                      screen.blit(item[0], (item[1], item[2]))
+                      dicElementoEnemy.get(item[3]).update(item[1],item[2])
+
+                      if(colisao(player,dicElementoEnemy.get(item[3]))):
+                            if(dicElementoEnemy.get(item[3]).nomeElemento == elementoAmigo):
+                                  placar += 10
+                                  item[1] = 900                        
+                                  item[2] = 0
+                                  elementoAmigo = lstElementos[random.randint(0,1)]
+                                  lstElementosFotos = []
+                                  score = font2.render('Placar: ' + str(placar), True, (BLUE))
+                                  screen.blit(score, (800, 50))
+                                  pygame.mixer.music.load('catch.mp3')
+                                  pygame.mixer.music.play(0)                              
+                            else:
+                                  placar -= 10
+                                  item[1] = 900                        
+                                  item[2] = 0                                        
+                                  score = font2.render('Placar: ' + str(placar), True, (RED))
+                                  screen.blit(score, (800, 50))
+
+              if(temporizador < 58):
+                bateriaX -= 5
+                if(bateriaX < 0):
+                      bateriaX = 900
+                      bateriaY = random.randint(0,500)
+                enviarAjuda = True
+
+              if(enviarAjuda == True):
+                ajuda.update(bateriaX,bateriaY)
+                if(colisao(player,ajuda)):
+                      temporizador += 2
+                      bateria = pygame.image.load('bateria.png').convert_alpha()
+                      bateria = pygame.transform.scale(bateria, (140, 120))
+                      bateriaX = 900
+                      bateriaY = random.randint(0,500)
+                      ajuda = Bateria(bateriaX,bateriaY,40)                
+                screen.blit(bateria,(bateriaX,bateriaY))
+                enviarAjuda = False
+
+              player.update(johnX,johnY)
+              screen.blit(john, (johnX, johnY))
+
+
+
+
+              if(naveInimigaY > 600):
+                    naveInimigaY = 0
+              if(balaInimigaY > 600):
+                    balaInimigaY = naveInimigaY
+                    balaInimigaX = naveInimigaX
+              if(temporizador < temporizadorInimigos):
+                    balaInimigaX -= 10
+                    balaInimigaY += 5
+                    naveInimigaY += 5                 
+                    screen.blit(naveInimiga, (naveInimigaX,naveInimigaY))
+                    screen.blit(balaInimiga, (balaInimigaX, naveInimigaY))
+                    bala.update(balaInimigaX,balaInimigaY)
+                    nave.update(naveInimigaX,naveInimigaY)
+
+              if(colisao(player,bala)):
+                    placar -= 10
+                    balaInimigaY = naveInimigaY
+                    balaInimigaX = naveInimigaX
+                    screen.blit(balaInimiga, (balaInimigaX, naveInimigaY))
+                    bala.update(balaInimigaX,balaInimigaY)
+
+              if(dificuldade != 'Fácil'):
+                  if(naveInimiga2Y < 0):
+                        naveInimiga2Y = 500
+                  if(balaInimiga2Y < 0):
+                        balaInimiga2Y = naveInimiga2Y
+                        balaInimiga2X = naveInimiga2X
+                  if(temporizador < temporizadorInimigos):
+                        balaInimiga2X -= 10
+                        balaInimiga2Y -= 5
+                        naveInimiga2Y -= 5                 
+                        screen.blit(naveInimiga2, (naveInimiga2X,naveInimiga2Y))
+                        screen.blit(balaInimiga2, (balaInimiga2X, naveInimiga2Y))
+                        bala2.update(balaInimiga2X,balaInimiga2Y)
+                        nave2.update(naveInimiga2X,naveInimiga2Y)
+
+                  if(colisao(player,bala2)):
+                        placar -= 10
+                        balaInimiga2Y = naveInimiga2Y
+                        balaInimiga2X = naveInimiga2X
+                        screen.blit(balaInimiga2, (balaInimiga2X, naveInimiga2Y))
+                        bala2.update(balaInimiga2X,balaInimiga2Y)                 
+                    
+        
+        else:
+          background_image = pygame.image.load("back.jpg").convert()
+          background_image = pygame.transform.scale(background_image, (1000, 600))
+          screen.blit(background_image, [0, 0])
+          textoFim = 'Fim de Jogo'
+          textoPlacar = 'Melhores pontuações: '
+          textoFinal = font.render(textoFim, True, (WHITE))
+          placarFinal = font2.render(textoPlacar, True, (WHITE))
+          pontuacao1 = font3.render('1 - João - 50', True, (WHITE))
+          pontuacao2 = font3.render('2 - J - 40', True, (WHITE))
+          pontuacao3 = font3.render('3 - Bruno - 30', True, (WHITE))
+          pontuacao4 = font3.render('4 - Fidalgo - 20', True, (WHITE))
+          pontuacao5 = font3.render('5 - Jr - 10', True, (WHITE))
+          jogarNovamente = font3.render('Jogar Novamente', True, (BLUE))
+          screen.blit(textoFinal, (300, 20))
+          screen.blit(placarFinal, (320, 170))
+          screen.blit(pontuacao1, (420, 280))
+          screen.blit(pontuacao2, (420, 320))
+          screen.blit(pontuacao3, (420, 360))
+          screen.blit(pontuacao4, (420, 400))
+          screen.blit(pontuacao5, (420, 440))
+          desenhaRetangulo(screen,WHITE,(390,550,150,40),0)
+          screen.blit(jogarNovamente, (400, 557))
+          for event in pygame.event.get():
+              if event.type == pygame.MOUSEMOTION:
+                  x, y = event.pos
+                  if ( x in range(390,540)) and (y in range(550,590)):
+                      desenhaRetangulo(screen,CINZA,(390,550,150,40),0)
+                      screen.blit(jogarNovamente, (400, 557))
+              if event.type == pygame.MOUSEBUTTONUP:        
+                  x, y = event.pos
+                  if ( x in range(390,540)) and (y in range(550,590)):
+                      menu.mainloop(surface)
+                    
+        pygame.display.update()
+        fpsClock.tick(FPS)
+
+
+
+
+
+menu = pygame_menu.Menu(height=600,
+                        width=1000,
+                        theme=pygame_menu.themes.THEME_DARK,
+                        title='Menu')
+
+
+
+nome = menu.add_text_input('Nome: ', default='', onchange = set_nome)
+menu.add_selector('Dificuldade: ', [('Fácil', 1), ('Difícil', 2)], onchange=set_difficulty)
+menu.add_vertical_margin(50)
+menu.add_button('Jogar', start_the_game)
+
+
+if __name__ == '__main__':
+    menu.mainloop(surface)
+
+
+
+    
